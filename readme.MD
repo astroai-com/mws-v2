@@ -1,14 +1,22 @@
 # Amazon Marketplace Webservices
-[![Latest Stable Version](https://poser.pugx.org/mcs/amazon-mws/v/stable)](https://packagist.org/packages/mcs/amazon-mws) [![Latest Unstable Version](https://poser.pugx.org/mcs/amazon-mws/v/unstable)](https://packagist.org/packages/mcs/amazon-mws) [![License](https://poser.pugx.org/mcs/amazon-mws/license)](https://packagist.org/packages/mcs/amazon-mws) [![Total Downloads](https://poser.pugx.org/mcs/amazon-mws/downloads)](https://packagist.org/packages/mcs/amazon-mws)
+http://docs.developer.amazonservices.com/en_US/dev_guide/index.html 
 
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=FQG5EWN987PJW)
+Amazon Marketplace Web Service（Amazon MWS）是一个集成的Web Service API，可帮助Amazon卖家以编程方式交换有关清单，订单，付款，报告等的数据。 
+与Amazon的数据集成可实现高水平的销售自动化，从而可以帮助卖家发展业务。通过使用Amazon MWS，卖家可以提高销售效率，减少人工需求并改善对客户的响应时间。 
 
-Interaction with the Amazon Api for vendors called MWS
+Feeds API: 使您可以将库存和订单数据上传到Amazon 
+Finances API: 通过Amazon获取与您的业务相关的财务信息 
+Fulfillment Inbound Shipment API: Amazon的配送网络中创建和更新库存的入库发货 
+Fulfillment Inventory API: Amazon配送网络中库存的最新信息 
+Fulfillment Outbound Shipment API: 使用Amazon配送网络履行多渠道订单 
+Merchant Fulfillment API: 
+Orders API: 
+Products API: 
+Recommendations API: 
+Reports API: 
+Sellers API: 
+Subscriptions API: 
 
-### Installation:
-```bash
-$ composer require mcs/amazon-mws
-```
 ### Initiate the client
 ```php
 require_once 'vendor/autoload.php';
