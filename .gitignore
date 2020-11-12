@@ -1,0 +1,9 @@
+nbproject/
+vendor/
+test.php
+xml.xml
+xsd/
+documentor.php
+test.csv
+.idea/
+/nbproject/private/
