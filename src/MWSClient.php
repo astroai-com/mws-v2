@@ -347,8 +347,8 @@ class MWSClient {
      * @return array
      */
     public function ListOrders(DateTime $from, $allMarketplaces = false, $states = [
-        'Unshipped', 'PartiallyShipped'
-    ], $FulfillmentChannels = 'MFN') {
+                'Unshipped', 'PartiallyShipped'
+            ], $FulfillmentChannels = 'MFN') {
         $query = [
             'CreatedAfter' => gmdate(self::DATE_FORMAT, $from->getTimestamp())
         ];
@@ -1269,7 +1269,14 @@ class MWSClient {
                 $headers = $csv->fetchOne();
                 $result = [];
                 foreach ($csv->setOffset(1)->fetchAll() as $row) {
-                    $result[] = array_combine($headers, $row);
+                    if (!$row) {
+                        continue;
+                    }
+                    $t = [];
+                    foreach ($headers as $k => $h) {
+                        $t[$h] = isset($row[$k]) ? $row[$k] : '';
+                    }
+                    $result[] = $t;
                 }
             }
 
