@@ -1077,7 +1077,7 @@ class MWSClient {
      * @param array $OrderItems OrderItems
      * @return array
      */
-    public function createMfnOrder($OrderItems = []) {
+    public function createMfnOrder($OrderItems = [], array $appendHeader = []) {
 
         if (!is_array($OrderItems) || !$OrderItems) {
             throw new Exception('Wrong multi-channel order creation parameters');
@@ -1091,6 +1091,8 @@ class MWSClient {
             'DeliverySLA', 'AddressName', 'AddressFieldOne', 'AddressCity', 'AddressCountryCode', 'AddressStateOrRegion', 'AddressPostalCode'
         ];
 
+        $appendHeader && $header = array_merge($header, $appendHeader);
+        
         $csv->insertOne($header);
 
         foreach ($OrderItems as $item) {
