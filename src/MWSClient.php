@@ -6,13 +6,13 @@ use DateTime;
 use Exception;
 use DateTimeZone;
 use MCS\MWSEndPoint;
+use MCS\MWSConfig;
 use League\Csv\Reader;
 use League\Csv\Writer;
 use SplTempFileObject;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\BadResponseException;
 use Spatie\ArrayToXml\ArrayToXml;
-use Astroai\Config\System;
 
 class MWSClient {
 
