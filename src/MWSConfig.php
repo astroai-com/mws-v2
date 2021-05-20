@@ -1,7 +1,7 @@
 <?php
 namespace MCS;
 
-class System {
+class MWSConfig {
     /**
      * Mws API市场配置
      */

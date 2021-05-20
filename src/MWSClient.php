@@ -50,7 +50,7 @@ class MWSClient {
             }
         }
 
-        $this->MarketplaceIds = System::$MwsMarkets;
+        $this->MarketplaceIds = MWSConfig::$MwsMarkets;
 
         if (!isset($this->MarketplaceIds[$this->config['Marketplace_Id']])) {
             throw new Exception('Invalid Marketplace Id');
