@@ -4,7 +4,6 @@ namespace MCS;
 
 use DateTime;
 use Exception;
-use DateTimeZone;
 use MCS\MWSEndPoint;
 use MCS\MWSConfig;
 use League\Csv\Reader;
@@ -69,133 +68,14 @@ class MWSClient {
     }
 
     /**
-     * A method to quickly check if the supplied credentials are valid
-     * @return boolean
-     */
-    public function validateCredentials() {
-        try {
-            $this->ListOrderItems('validate');
-        } catch (Exception $e) {
-            echo $e->getMessage();
-            if ($e->getMessage() == 'Invalid AmazonOrderId: validate') {
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-
-    /**
-     * Returns the current competitive price of a product, based on ASIN.
-     * @param array [$asin_array = []]
-     * @return array
-     */
-    public function GetCompetitivePricingForASIN($asin_array = []) {
-        if (count($asin_array) > 20) {
-            throw new Exception('Maximum amount of ASIN\'s for this call is 20');
-        }
-
-        $counter = 1;
-        $query = [
-            'MarketplaceId' => $this->config['Marketplace_Id']
-        ];
-
-        foreach ($asin_array as $key) {
-            $query['ASINList.ASIN.' . $counter] = $key;
-            $counter++;
-        }
-
-        $response = $this->request(
-                'GetCompetitivePricingForASIN', $query
-        );
-
-        if (isset($response['GetCompetitivePricingForASINResult'])) {
-            $response = $response['GetCompetitivePricingForASINResult'];
-            if (array_keys($response) !== range(0, count($response) - 1)) {
-                $response = [$response];
-            }
-        } else {
-            return [];
-        }
-
-        $array = [];
-        foreach ($response as $product) {
-            if (isset($product['Product']['CompetitivePricing']['CompetitivePrices']['CompetitivePrice']['Price'])) {
-                $array[$product['Product']['Identifiers']['MarketplaceASIN']['ASIN']] = $product['Product']['CompetitivePricing']['CompetitivePrices']['CompetitivePrice']['Price'];
-            }
-        }
-        return $array;
-    }
-
-    /**
-     * Returns the current competitive price of a product, based on SKU.
-     * @param array [$sku_array = []]
-     * @return array
-     */
-    public function GetCompetitivePricingForSKU($sku_array = []) {
-        if (count($sku_array) > 20) {
-            throw new Exception('Maximum amount of SKU\'s for this call is 20');
-        }
-
-        $counter = 1;
-        $query = [
-            'MarketplaceId' => $this->config['Marketplace_Id']
-        ];
-
-        foreach ($sku_array as $key) {
-            $query['SellerSKUList.SellerSKU.' . $counter] = $key;
-            $counter++;
-        }
-
-        $response = $this->request(
-                'GetCompetitivePricingForSKU', $query
-        );
-
-        if (isset($response['GetCompetitivePricingForSKUResult'])) {
-            $response = $response['GetCompetitivePricingForSKUResult'];
-            if (array_keys($response) !== range(0, count($response) - 1)) {
-                $response = [$response];
-            }
-        } else {
-            return [];
-        }
-
-        $array = [];
-        foreach ($response as $product) {
-            if (isset($product['Product']['CompetitivePricing']['CompetitivePrices']['CompetitivePrice']['Price'])) {
-                $array[$product['Product']['Identifiers']['SKUIdentifier']['SellerSKU']]['Price'] = $product['Product']['CompetitivePricing']['CompetitivePrices']['CompetitivePrice']['Price'];
-                $array[$product['Product']['Identifiers']['SKUIdentifier']['SellerSKU']]['Rank'] = $product['Product']['SalesRankings']['SalesRank'][1];
-            }
-        }
-        return $array;
-    }
-
-    /**
-     * Returns lowest priced offers for a single product, based on ASIN.
-     * @param string $asin
-     * @param string [$ItemCondition = 'New'] Should be one in: New, Used, Collectible, Refurbished, Club
-     * @return array
-     */
-    public function GetLowestPricedOffersForASIN($asin, $ItemCondition = 'New') {
-
-        $query = [
-            'ASIN' => $asin,
-            'MarketplaceId' => $this->config['Marketplace_Id'],
-            'ItemCondition' => $ItemCondition
-        ];
-
-        return $this->request('GetLowestPricedOffersForASIN', $query);
-    }
-
-    /**
-     * Returns pricing information for your own offer listings, based on SKU.
+     * Returns pricing information for your own offer listings, based on SKU
      * @param array  [$sku_array = []]
      * @param string [$ItemCondition = null]
      * @return array
      */
-    public function GetMyPriceForSKU($sku_array = [], $ItemCondition = null) {
+    public function GetSkuPrice($sku_array = []) {
         if (count($sku_array) > 20) {
-            throw new Exception('Maximum amount of SKU\'s for this call is 20');
+            throw new Exception('Maximum SKU is 20');
         }
 
         $counter = 1;
@@ -203,18 +83,12 @@ class MWSClient {
             'MarketplaceId' => $this->config['Marketplace_Id']
         ];
 
-        if (!is_null($ItemCondition)) {
-            $query['ItemCondition'] = $ItemCondition;
-        }
-
         foreach ($sku_array as $key) {
             $query['SellerSKUList.SellerSKU.' . $counter] = $key;
             $counter++;
         }
 
-        $response = $this->request(
-                'GetMyPriceForSKU', $query
-        );
+        $response = $this->request('GetMyPriceForSKU', $query);
 
         if (isset($response['GetMyPriceForSKUResult'])) {
             $response = $response['GetMyPriceForSKUResult'];
@@ -241,14 +115,14 @@ class MWSClient {
     }
 
     /**
-     * Returns pricing information for your own offer listings, based on ASIN.
+     * Returns pricing information for your own offer listings, based on ASIN
      * @param array [$asin_array = []]
      * @param string [$ItemCondition = null]
      * @return array
      */
-    public function GetMyPriceForASIN($asin_array = [], $ItemCondition = null) {
+    public function GetAsinPrice($asin_array = []) {
         if (count($asin_array) > 20) {
-            throw new Exception('Maximum amount of SKU\'s for this call is 20');
+            throw new Exception('Maximum of ASIN is 20');
         }
 
         $counter = 1;
@@ -256,18 +130,12 @@ class MWSClient {
             'MarketplaceId' => $this->config['Marketplace_Id']
         ];
 
-        if (!is_null($ItemCondition)) {
-            $query['ItemCondition'] = $ItemCondition;
-        }
-
         foreach ($asin_array as $key) {
             $query['ASINList.ASIN.' . $counter] = $key;
             $counter++;
         }
 
-        $response = $this->request(
-                'GetMyPriceForASIN', $query
-        );
+        $response = $this->request('GetMyPriceForASIN', $query);
 
         if (isset($response['GetMyPriceForASINResult'])) {
             $response = $response['GetMyPriceForASINResult'];
@@ -290,124 +158,15 @@ class MWSClient {
     }
 
     /**
-     * Returns pricing information for the lowest-price active offer listings for up to 20 products, based on ASIN.
-     * @param array [$asin_array = []] array of ASIN values
-     * @param array [$ItemCondition = null] Should be one in: New, Used, Collectible, Refurbished, Club. Default: All
-     * @return array
-     */
-    public function GetLowestOfferListingsForASIN($asin_array = [], $ItemCondition = null) {
-        if (count($asin_array) > 20) {
-            throw new Exception('Maximum amount of ASIN\'s for this call is 20');
-        }
-
-        $counter = 1;
-        $query = [
-            'MarketplaceId' => $this->config['Marketplace_Id']
-        ];
-
-        if (!is_null($ItemCondition)) {
-            $query['ItemCondition'] = $ItemCondition;
-        }
-
-        foreach ($asin_array as $key) {
-            $query['ASINList.ASIN.' . $counter] = $key;
-            $counter++;
-        }
-
-        $response = $this->request(
-                'GetLowestOfferListingsForASIN', $query
-        );
-
-        if (isset($response['GetLowestOfferListingsForASINResult'])) {
-            $response = $response['GetLowestOfferListingsForASINResult'];
-            if (array_keys($response) !== range(0, count($response) - 1)) {
-                $response = [$response];
-            }
-        } else {
-            return [];
-        }
-
-        $array = [];
-        foreach ($response as $product) {
-            if (isset($product['Product']['LowestOfferListings']['LowestOfferListing'])) {
-                $array[$product['Product']['Identifiers']['MarketplaceASIN']['ASIN']] = $product['Product']['LowestOfferListings']['LowestOfferListing'];
-            } else {
-                $array[$product['Product']['Identifiers']['MarketplaceASIN']['ASIN']] = false;
-            }
-        }
-        return $array;
-    }
-
-    /**
-     * Returns orders created or updated during a time frame that you specify.
-     * @param object DateTime $from
-     * @param boolean $allMarketplaces, list orders from all marketplaces
-     * @param array $states, an array containing orders states you want to filter on
-     * @param string $FulfillmentChannel
-     * @return array
-     */
-    public function ListOrders(DateTime $from, $allMarketplaces = false, $states = [
-                'Unshipped', 'PartiallyShipped'
-            ], $FulfillmentChannels = 'MFN') {
-        $query = [
-            'CreatedAfter' => gmdate(self::DATE_FORMAT, $from->getTimestamp())
-        ];
-
-        $counter = 1;
-        foreach ($states as $status) {
-            $query['OrderStatus.Status.' . $counter] = $status;
-            $counter = $counter + 1;
-        }
-
-        if ($allMarketplaces == true) {
-            $counter = 1;
-            foreach ($this->MarketplaceIds as $key => $value) {
-                $query['MarketplaceId.Id.' . $counter] = $key;
-                $counter = $counter + 1;
-            }
-        }
-
-        if (is_array($FulfillmentChannels)) {
-            $counter = 1;
-            foreach ($FulfillmentChannels as $fulfillmentChannel) {
-                $query['FulfillmentChannel.Channel.' . $counter] = $fulfillmentChannel;
-                $counter = $counter + 1;
-            }
-        } else {
-            $query['FulfillmentChannel.Channel.1'] = $FulfillmentChannels;
-        }
-
-        $response = $this->request('ListOrders', $query);
-
-        if (isset($response['ListOrdersResult']['Orders']['Order'])) {
-            if (isset($response['ListOrdersResult']['NextToken'])) {
-                $data['ListOrders'] = $response['ListOrdersResult']['Orders']['Order'];
-                $data['NextToken'] = $response['ListOrdersResult']['NextToken'];
-                return $data;
-            }
-
-            $response = $response['ListOrdersResult']['Orders']['Order'];
-
-            if (array_keys($response) !== range(0, count($response) - 1)) {
-                return [$response];
-            }
-
-            return $response;
-        } else {
-            return [];
-        }
-    }
-
-    /**
      * 
      * @param DateTime $from
      * @param DateTime $to
-     * @param string $type Update OR Create
+     * @param string $type Update/Create
      * @param array $states
      * @param array $FulfillmentChannels
      * @return array
      */
-    public function ListOrdersFromTo(DateTime $from, DateTime $to, $type = 'Update', $states = ['shipped'], $FulfillmentChannels = ['MFN', 'AFN']) {
+    public function GetOrders(DateTime $from, DateTime $to, $type = 'Update', $status = ['Pending', 'Shipped', 'Canceled'], $FulfillmentChannels = ['MFN', 'AFN']) {
         if ($type == 'Update') {
             $query = [
                 'LastUpdatedAfter' => gmdate(self::DATE_FORMAT, $from->getTimestamp()),
@@ -421,38 +180,28 @@ class MWSClient {
         }
 
         $counter = 1;
-        foreach ($states as $status) {
-            $query['OrderStatus.Status.' . $counter] = $status;
+        foreach ($status as $st) {
+            $query['OrderStatus.Status.' . $counter] = $st;
             $counter = $counter + 1;
         }
 
-        /* $counter = 1;
-          foreach ($this->MarketplaceIds as $key => $value) {
-          $query['MarketplaceId.Id.' . $counter] = $key;
-          $counter = $counter + 1;
-          } */
-
-        if (is_array($FulfillmentChannels)) {
-            $counter = 1;
-            foreach ($FulfillmentChannels as $fulfillmentChannel) {
-                $query['FulfillmentChannel.Channel.' . $counter] = $fulfillmentChannel;
-                $counter = $counter + 1;
-            }
-        } else {
-            $query['FulfillmentChannel.Channel.1'] = $FulfillmentChannels;
+        $counter = 1;
+        foreach ($FulfillmentChannels as $fulfillmentChannel) {
+            $query['FulfillmentChannel.Channel.' . $counter] = $fulfillmentChannel;
+            $counter = $counter + 1;
         }
 
         $response = $this->request('ListOrders', $query);
 
         if (isset($response['ListOrdersResult']['Orders']['Order'])) {
             if (isset($response['ListOrdersResult']['NextToken'])) {
-                $data['ListOrders'] = $response['ListOrdersResult']['Orders']['Order'];
-                $data['NextToken'] = $response['ListOrdersResult']['NextToken'];
-                return $data;
+                return [
+                    'ListOrders' => $response['ListOrdersResult']['Orders']['Order'],
+                    'NextToken' => $response['ListOrdersResult']['NextToken']
+                ];
             }
 
             $response = $response['ListOrdersResult']['Orders']['Order'];
-
             if (array_keys($response) !== range(0, count($response) - 1)) {
                 return [$response];
             }
@@ -464,26 +213,26 @@ class MWSClient {
     }
 
     /**
-     * Returns orders created or updated during a time frame that you specify.
+     * Returns orders created or updated during a time frame that you specify
      * @param string $nextToken
      * @return array
      */
-    public function ListOrdersByNextToken($nextToken) {
+    public function GetOrdersByNextToken($nextToken) {
         $query = [
-            'NextToken' => $nextToken,
+            'NextToken' => $nextToken
         ];
 
-        $response = $this->request(
-                'ListOrdersByNextToken', $query
-        );
+        $response = $this->request('ListOrdersByNextToken', $query);
+
         if (isset($response['ListOrdersByNextTokenResult']['Orders']['Order'])) {
             if (isset($response['ListOrdersByNextTokenResult']['NextToken'])) {
-                $data['ListOrders'] = $response['ListOrdersByNextTokenResult']['Orders']['Order'];
-                $data['NextToken'] = $response['ListOrdersByNextTokenResult']['NextToken'];
-                return $data;
+                return [
+                    'ListOrders' => $response['ListOrdersByNextTokenResult']['Orders']['Order'],
+                    'NextToken' => $response['ListOrdersByNextTokenResult']['NextToken']
+                ];
             }
-            $response = $response['ListOrdersByNextTokenResult']['Orders']['Order'];
 
+            $response = $response['ListOrdersByNextTokenResult']['Orders']['Order'];
             if (array_keys($response) !== range(0, count($response) - 1)) {
                 return [$response];
             }
@@ -494,15 +243,45 @@ class MWSClient {
     }
 
     /**
-     * Returns an order based on the AmazonOrderId values that you specify.
+     * Returns an order based on the AmazonOrderId values that you specify
      * @param string $AmazonOrderId
      * @return array if the order is found, false if not
      */
-    public function GetOrder($AmazonOrderId) {
-        $response = $this->request('GetOrder', [
-            'AmazonOrderId.Id.1' => $AmazonOrderId
-        ]);
+    public function GetOrder($AmazonOrderId = '') {
+        $response = $this->request('GetOrder', ['AmazonOrderId.Id.1' => $AmazonOrderId]);
+        return isset($response['GetOrderResult']['Orders']['Order']) ? $response['GetOrderResult']['Orders']['Order'] : [];
+    }
 
+    /**
+     * Get multi channel order info
+     * @param string $SellerOrderId
+     * @return array
+     */
+    public function GetMcOrder($SellerOrderId = '') {
+        $response = $this->request('GetFulfillmentOrder', ['SellerFulfillmentOrderId' => $SellerOrderId]);
+        return isset($response['GetFulfillmentOrderResult']) ? $response['GetFulfillmentOrderResult'] : [];
+    }
+    
+        /**
+     * Returns order list on the Amazon
+     * @param array $AmazonOrderIds
+     * @return array if found, false if not
+     */
+    public function GetOrderList($AmazonOrderIds = []) {
+        if (!$AmazonOrderIds) {
+            return [];
+        }
+
+        if (count($AmazonOrderIds) > 50) {
+            throw new Exception('Maximum number of AmazonOrderIds is 50');
+        }
+
+        $query = [];
+        foreach ($AmazonOrderIds as $k => $AmazonOrderId) {
+            $num = $k + 1;
+            $query['AmazonOrderId.Id.' . $num] = $AmazonOrderId;
+        }
+        $response = $this->request('GetOrder', $query);
         if (isset($response['GetOrderResult']['Orders']['Order'])) {
             return $response['GetOrderResult']['Orders']['Order'];
         } else {
@@ -511,44 +290,42 @@ class MWSClient {
     }
 
     /**
-     * 查询多渠道订单信息
-     * @param string $SellerFulfillmentOrderId
+     * Returns order items based on the AmazonOrderId that you specify
+     * @param string $AmazonOrderId
      * @return array
      */
-    public function GetFulfillmentOrder($SellerFulfillmentOrderId = '') {
-        $response = $this->request('GetFulfillmentOrder', [
-            'SellerFulfillmentOrderId' => $SellerFulfillmentOrderId
-        ]);
-
-        if (isset($response['GetFulfillmentOrderResult'])) {
-            return $response['GetFulfillmentOrderResult'];
+    public function GetOrderItems($AmazonOrderId = '') {
+        if (!$AmazonOrderId) {
+            throw new Exception('The query AmazonOrderId is not specified');
+        }
+        $response = $this->request('ListOrderItems', ['AmazonOrderId' => $AmazonOrderId]);
+        $result = array_values($response['ListOrderItemsResult']['OrderItems']);
+        if (isset($result[0]['QuantityOrdered'])) {
+            return $result;
         } else {
-            return [];
+            return $result[0];
         }
     }
 
     /**
-     * 返回给定订单的财务事件
+     * Get order financial info
      */
     public function GetOrderFinance($AmazonOrderId = '') {
-        $response = $this->request('ListFinancialEvents', [
-            'AmazonOrderId' => $AmazonOrderId
-        ]);
-
+        $response = $this->request('ListFinancialEvents', ['AmazonOrderId' => $AmazonOrderId]);
         $result = isset($response['ListFinancialEventsResult']['FinancialEvents']) ? $response['ListFinancialEventsResult']['FinancialEvents'] : [];
         return $result;
     }
 
     /**
-     * 查询FBA入库货件列表
-     * @param array $ShipmentIds 查询指定的ShipmentIds.
-     * @param array $ShipmentStatus 查询指定的ShipmentStatus.
-     * @param DateTime $from 更新开始时间.
-     * @param DateTime $to 更新截止时间.
+     * Get FBA shipment inbound info
+     * @param array $ShipmentIds
+     * @param array $ShipmentStatus
+     * @param DateTime $from
+     * @param DateTime $to
      * @return array
-     * @throws Exception 抛出异常.
+     * @throws Exception
      */
-    public function ListInboundShipments($ShipmentIds = [], $ShipmentStatus = [], \DateTime $from = null, \DateTime $to = null) {
+    public function ListInboundShipments($ShipmentIds = [], $ShipmentStatus = [], DateTime $from = null, DateTime $to = null) {
         if ($ShipmentIds && count($ShipmentIds) > 50) {
             throw new Exception('Maximum number of ShipmentIds is 50');
         }
@@ -579,7 +356,7 @@ class MWSClient {
     }
 
     /**
-     * 使用 NextToken 参数返回下一页入库货件
+     * Get FBA shipment info by NextToken
      */
     public function ListInboundShipmentsByNextToken($NextToken) {
         $query = [
@@ -593,9 +370,9 @@ class MWSClient {
     }
 
     /**
-     * 查询FBA入库货件的商品入库信息
+     * Get SKU info of FBA shipment 
      */
-    public function ListInboundShipmentItems($ShipmentId = '', \DateTime $from = null, \DateTime $to = null) {
+    public function ListInboundShipmentItems($ShipmentId = '', DateTime $from = null, DateTime $to = null) {
         if ($ShipmentId) {
             $query = [
                 "ShipmentId" => $ShipmentId
@@ -616,7 +393,7 @@ class MWSClient {
     }
 
     /**
-     * 查询当前入库货件的运输信息
+     * Returns current transportation information about an inbound shipment
      */
     public function GetTransportContent($ShipmentId = '') {
         if (!$ShipmentId) {
@@ -633,53 +410,7 @@ class MWSClient {
     }
 
     /**
-     * Returns order list on the Amazon.
-     * @param array $AmazonOrderIds OrderIds.
-     * @return array if found, false if not.
-     */
-    public function GetOrders($AmazonOrderIds = []) {
-        if (!$AmazonOrderIds) {
-            return [];
-        }
-
-        if (count($AmazonOrderIds) > 50) {
-            throw new Exception('Maximum number of AmazonOrderIds is 50');
-        }
-
-        $query = [];
-        foreach ($AmazonOrderIds as $k => $AmazonOrderId) {
-            $num = $k + 1;
-            $query['AmazonOrderId.Id.' . $num] = $AmazonOrderId;
-        }
-        $response = $this->request('GetOrder', $query);
-        if (isset($response['GetOrderResult']['Orders']['Order'])) {
-            return $response['GetOrderResult']['Orders']['Order'];
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * Returns order items based on the AmazonOrderId that you specify.
-     * @param string $AmazonOrderId
-     * @return array
-     */
-    public function ListOrderItems($AmazonOrderId) {
-        $response = $this->request('ListOrderItems', [
-            'AmazonOrderId' => $AmazonOrderId
-        ]);
-
-        $result = array_values($response['ListOrderItemsResult']['OrderItems']);
-
-        if (isset($result[0]['QuantityOrdered'])) {
-            return $result;
-        } else {
-            return $result[0];
-        }
-    }
-
-    /**
-     * Returns the parent product categories that a product belongs to, based on SellerSKU.
+     * Returns the parent product categories that a product belongs to, based on SellerSKU
      * @param string $SellerSKU
      * @return array if found, false if not found
      */
@@ -697,7 +428,7 @@ class MWSClient {
     }
 
     /**
-     * Returns the parent product categories that a product belongs to, based on ASIN.
+     * Returns the parent product categories that a product belongs to, based on ASIN
      * @param string $ASIN
      * @return array if found, false if not found
      */
@@ -738,9 +469,7 @@ class MWSClient {
             $counter++;
         }
 
-        $response = $this->request(
-                'GetMatchingProductForId', $array, null, true
-        );
+        $response = $this->request('GetMatchingProductForId', $array, null, true);
 
         $languages = [
             'de-DE', 'en-EN', 'es-ES', 'fr-FR', 'it-IT', 'en-US'
@@ -769,8 +498,6 @@ class MWSClient {
 
         if (isset($response['GetMatchingProductForIdResult']) && is_array($response['GetMatchingProductForIdResult'])) {
             foreach ($response['GetMatchingProductForIdResult'] as $result) {
-
-                //print_r($product);exit;
 
                 $asin = $result['@attributes']['Id'];
                 if ($result['@attributes']['status'] != 'Success') {
@@ -854,11 +581,7 @@ class MWSClient {
             'QueryContextId' => $query_context_id
         ];
 
-        $response = $this->request(
-                'ListMatchingProducts', $array, null, true
-        );
-
-
+        $response = $this->request('ListMatchingProducts', $array, null, true);
 
         $languages = [
             'de-DE', 'en-EN', 'es-ES', 'fr-FR', 'it-IT', 'en-US'
@@ -883,7 +606,7 @@ class MWSClient {
     }
 
     /**
-     * Returns a list of reports that were created in the previous 90 days.
+     * Returns a list of reports that were created in the previous 90 days
      * @param array [$ReportTypeList = []]
      * @return array
      */
@@ -901,7 +624,7 @@ class MWSClient {
     }
 
     /**
-     * Returns your active recommendations for a specific category or for all categories for a specific marketplace.
+     * Returns your active recommendations for a specific category or for all categories for a specific marketplace
      * @param string [$RecommendationCategory = null] One of: Inventory, Selection, Pricing, Fulfillment, ListingQuality, GlobalSelling, Advertising
      * @return array/false if no result
      */
@@ -937,73 +660,21 @@ class MWSClient {
     }
 
     /**
-     * Update a product's stock quantity
-     * @param array $array array containing sku as key and quantity as value
-     * @return array feed submission result
-     */
-    public function updateStock(array $array) {
-        $feed = [
-            'MessageType' => 'Inventory',
-            'Message' => []
-        ];
-
-        foreach ($array as $sku => $quantity) {
-            $feed['Message'][] = [
-                'MessageID' => rand(),
-                'OperationType' => 'Update',
-                'Inventory' => [
-                    'SKU' => $sku,
-                    'Quantity' => (int) $quantity
-                ]
-            ];
-        }
-
-        return $this->SubmitFeed('_POST_INVENTORY_AVAILABILITY_DATA_', $feed);
-    }
-
-    /**
-     * Update a product's stock quantity
-     *
-     * @param array $array array containing arrays with next keys: [sku, quantity, latency]
-     * @return array feed submission result
-     */
-    public function updateStockWithFulfillmentLatency(array $array) {
-        $feed = [
-            'MessageType' => 'Inventory',
-            'Message' => []
-        ];
-
-        foreach ($array as $item) {
-            $feed['Message'][] = [
-                'MessageID' => rand(),
-                'OperationType' => 'Update',
-                'Inventory' => [
-                    'SKU' => $item['sku'],
-                    'Quantity' => (int) $item['quantity'],
-                    'FulfillmentLatency' => $item['latency']
-                ]
-            ];
-        }
-
-        return $this->SubmitFeed('_POST_INVENTORY_AVAILABILITY_DATA_', $feed);
-    }
-
-    /**
-     * Update a product's price
-     * @param array $standardprice an array containing sku as key and price as value
-     * @param array $salesprice an optional array with sku as key and value consisting of an array with key/value pairs for SalePrice, StartDate, EndDate
+     * Update a SKU price info
+     * @param array $StandardPrice an array containing sku as key and price as value
+     * @param array $SalePrice an optional array with sku as key and value consisting of an array with key/value pairs for SalePrice, StartDate, EndDate
      * Dates in DateTime object
      * Price has to be formatted as XSD Numeric Data Type (http://www.w3schools.com/xml/schema_dtypes_numeric.asp)
      * @return array feed submission result
      */
-    public function updatePrice(array $standardprice, array $saleprice = null) {
+    public function UpdateSkuPrice(array $StandardPrice, array $SalePrice = null) {
 
         $feed = [
             'MessageType' => 'Price',
             'Message' => []
         ];
 
-        foreach ($standardprice as $sku => $price) {
+        foreach ($StandardPrice as $sku => $price) {
             $feed['Message'][] = [
                 'MessageID' => rand(),
                 'Price' => [
@@ -1017,15 +688,16 @@ class MWSClient {
                 ]
             ];
 
-            if (isset($saleprice[$sku]) && is_array($saleprice[$sku])) {
+            if (isset($SalePrice[$sku]) && is_array($SalePrice[$sku])) {
                 $feed['Message'][count($feed['Message']) - 1]['Price']['Sale'] = [
-                    'StartDate' => $saleprice[$sku]['StartDate']->format(self::DATE_FORMAT),
-                    'EndDate' => $saleprice[$sku]['EndDate']->format(self::DATE_FORMAT),
+                    'StartDate' => $SalePrice[$sku]['StartDate']->format(self::DATE_FORMAT),
+                    'EndDate' => $SalePrice[$sku]['EndDate']->format(self::DATE_FORMAT),
                     'SalePrice' => [
-                        '_value' => strval($saleprice[$sku]['SalePrice']),
+                        '_value' => strval($SalePrice[$sku]['SalePrice']),
                         '_attributes' => [
                             'currency' => 'DEFAULT'
-                        ]]
+                        ]
+                    ]
                 ];
             }
         }
@@ -1034,50 +706,11 @@ class MWSClient {
     }
 
     /**
-     * Post to create or update a product (_POST_FLAT_FILE_LISTINGS_DATA_)
-     * @param  object $MWSProduct or array of MWSProduct objects
-     * @return array
-     */
-    public function postProduct($MWSProduct) {
-
-        if (!is_array($MWSProduct)) {
-            $MWSProduct = [$MWSProduct];
-        }
-
-        $csv = Writer::createFromFileObject(new SplTempFileObject());
-
-        $csv->setDelimiter("\t");
-        $csv->setInputEncoding('iso-8859-1');
-
-        $csv->insertOne(['TemplateType=Offer', 'Version=2014.0703']);
-
-        $header = ['sku', 'price', 'quantity', 'product-id',
-            'product-id-type', 'condition-type', 'condition-note',
-            'ASIN-hint', 'title', 'product-tax-code', 'operation-type',
-            'sale-price', 'sale-start-date', 'sale-end-date', 'leadtime-to-ship',
-            'launch-date', 'is-giftwrap-available', 'is-gift-message-available',
-            'fulfillment-center-id', 'main-offer-image', 'offer-image1',
-            'offer-image2', 'offer-image3', 'offer-image4', 'offer-image5'
-        ];
-
-        $csv->insertOne($header);
-        $csv->insertOne($header);
-
-        foreach ($MWSProduct as $product) {
-            $csv->insertOne(
-                    array_values($product->toArray())
-            );
-        }
-
-        return $this->SubmitFeed('_POST_FLAT_FILE_LISTINGS_DATA_', $csv);
-    }
-
-    /**
      * Post to create a Multi-Channel order (_POST_FLAT_FILE_FULFILLMENT_ORDER_REQUEST_DATA_)
      * @param array $OrderItems OrderItems
      * @return array
      */
-    public function createMfnOrder($OrderItems = [], array $appendHeader = []) {
+    public function CreateMcOrder($OrderItems = [], array $AppendHeader = []) {
 
         if (!is_array($OrderItems) || !$OrderItems) {
             throw new Exception('Wrong multi-channel order creation parameters');
@@ -1088,13 +721,11 @@ class MWSClient {
         $csv->setInputEncoding('iso-8859-1');
 
         $header = ['MerchantFulfillmentOrderID', 'DisplayableOrderID', 'DisplayableOrderDate', 'MerchantSKU', 'Quantity', 'MerchantFulfillmentOrderItemID', 'DisplayableOrderComment',
-            'DeliverySLA', 'AddressName', 'AddressFieldOne', 'AddressCity', 'AddressCountryCode', 'AddressStateOrRegion', 'AddressPostalCode'
-        ];
+            'DeliverySLA', 'AddressName', 'AddressFieldOne', 'AddressCity', 'AddressCountryCode', 'AddressStateOrRegion', 'AddressPostalCode'];
 
-        $appendHeader && $header = array_merge($header, $appendHeader);
+        $AppendHeader && $header = array_merge($header, $AppendHeader);
 
         $csv->insertOne($header);
-
         foreach ($OrderItems as $item) {
             $csv->insertOne(array_values($item));
         }
@@ -1103,10 +734,10 @@ class MWSClient {
     }
 
     /**
-     * Ship and Confirm Shipment 
+     * Mc order shipping confirm
      */
-    public function confirmFulfillmentOrder($data = []) {
-        if (!$data) {
+    public function McOrderShippingConfirm($ShippingData = []) {
+        if (!$ShippingData) {
             throw new Exception('Data of order fulfillment is empty');
         }
 
@@ -1117,23 +748,20 @@ class MWSClient {
         $header = ['order-id', 'order-item-id', 'quantity', 'ship-date', 'carrier-code', 'carrier-name', 'tracking-number', 'ship-method'];
 
         $csv->insertOne($header);
-
-        foreach ($data as $d) {
-            $csv->insertOne(array_values($d));
+        foreach ($ShippingData as $data) {
+            $csv->insertOne(array_values($data));
         }
 
         return $this->SubmitFeed('_POST_FLAT_FILE_FULFILLMENT_DATA_', $csv);
     }
 
     /**
-     * Returns the feed processing report and the Content-MD5 header.
+     * Returns the feed processing report and the Content-MD5 header
      * @param string $FeedSubmissionId
      * @return array
      */
     public function GetFeedSubmissionResult($FeedSubmissionId) {
-        $result = $this->request('GetFeedSubmissionResult', [
-            'FeedSubmissionId' => $FeedSubmissionId
-        ]);
+        $result = $this->request('GetFeedSubmissionResult', ['FeedSubmissionId' => $FeedSubmissionId]);
 
         if (isset($result['Message']['ProcessingReport'])) {
             return $result['Message']['ProcessingReport'];
@@ -1143,30 +771,22 @@ class MWSClient {
     }
 
     /**
-     * Uploads a feed for processing by Amazon MWS.
+     * Uploads a feed for processing by Amazon MWS
      * @param string $FeedType (http://docs.developer.amazonservices.com/en_US/feeds/Feeds_FeedType.html)
      * @param mixed $feedContent Array will be converted to xml using https://github.com/spatie/array-to-xml. Strings will not be modified.
      * @param boolean $debug Return the generated xml and don't send it to amazon
      * @return array
      */
-    public function SubmitFeed($FeedType, $feedContent, $debug = false, $options = []) {
-
+    public function SubmitFeed($FeedType, $FeedContent, $debug = false, $options = []) {
         if (is_array($feedContent)) {
-            $feedContent = $this->arrayToXml(
-                    array_merge([
-                'Header' => [
-                    'DocumentVersion' => 1.01,
-                    'MerchantIdentifier' => $this->config['Seller_Id']
-                ]
-                            ], $feedContent)
-            );
+            $FeedContent = $this->arrayToXml(array_merge(['Header' => ['DocumentVersion' => 1.01, 'MerchantIdentifier' => $this->config['Seller_Id']]], $FeedContent));
         }
 
         if ($debug === true) {
-            return $feedContent;
+            return $FeedContent;
         } else if ($this->debugNextFeed == true) {
             $this->debugNextFeed = false;
-            return $feedContent;
+            return $FeedContent;
         }
 
         $purgeAndReplace = isset($options['PurgeAndReplace']) ? $options['PurgeAndReplace'] : false;
@@ -1174,19 +794,10 @@ class MWSClient {
         $query = [
             'FeedType' => $FeedType,
             'PurgeAndReplace' => ($purgeAndReplace ? 'true' : 'false'),
-            'Merchant' => $this->config['Seller_Id'],
-            'MarketplaceId.Id.1' => false,
-            'SellerId' => false,
+            'Merchant' => $this->config['Seller_Id']
         ];
 
-        //if ($FeedType === '_POST_PRODUCT_PRICING_DATA_') {
-        $query['MarketplaceIdList.Id.1'] = $this->config['Marketplace_Id'];
-        //}
-
-        $response = $this->request(
-                'SubmitFeed', $query, $feedContent
-        );
-
+        $response = $this->request('SubmitFeed', $query, $FeedContent);
         return $response['SubmitFeedResult']['FeedSubmissionInfo'];
     }
 
@@ -1254,16 +865,13 @@ class MWSClient {
      * @param string $ReportId
      * @return array on succes
      */
-    public function GetReport($ReportId) {
+    public function GetReport($ReportId = 0) {
         $status = $this->GetReportRequestStatus($ReportId);
 
         if ($status !== false && $status['ReportProcessingStatus'] === '_DONE_NO_DATA_') {
             return [];
         } else if ($status !== false && $status['ReportProcessingStatus'] === '_DONE_') {
-
-            $result = $this->request('GetReport', [
-                'ReportId' => $status['GeneratedReportId']
-            ]);
+            $result = $this->request('GetReport', ['ReportId' => $status['GeneratedReportId']]);
 
             if (is_string($result)) {
                 $csv = Reader::createFromString($result);
@@ -1330,9 +938,7 @@ class MWSClient {
             $counter++;
         }
 
-        $response = $this->request(
-                'ListInventorySupply', $query
-        );
+        $response = $this->request('ListInventorySupply', $query);
 
         $result = [];
         if (isset($response['ListInventorySupplyResult']['InventorySupplyList']['member'])) {
@@ -1348,40 +954,27 @@ class MWSClient {
      * Request MWS
      */
     private function request($endPoint, array $query = [], $body = null, $raw = false) {
-
         $endPoint = MWSEndPoint::get($endPoint);
 
         $merge = [
             'Timestamp' => gmdate(self::DATE_FORMAT, time()),
             'AWSAccessKeyId' => $this->config['Access_Key_ID'],
             'Action' => $endPoint['action'],
-            //'MarketplaceId.Id.1' => $this->config['Marketplace_Id'],
+            'MarketplaceId.Id.1' => $this->config['Marketplace_Id'],
             'SellerId' => $this->config['Seller_Id'],
+            'MWSAuthToken' => $this->config['MWSAuthToken'],
             'SignatureMethod' => self::SIGNATURE_METHOD,
             'SignatureVersion' => self::SIGNATURE_VERSION,
-            'Version' => $endPoint['date'],
+            'Version' => $endPoint['date']
         ];
 
         $query = array_merge($merge, $query);
-
-        if (!isset($query['MarketplaceId.Id.1'])) {
-            $query['MarketplaceId.Id.1'] = $this->config['Marketplace_Id'];
-        }
-
-        if (!is_null($this->config['MWSAuthToken']) and $this->config['MWSAuthToken'] != "") {
-            $query['MWSAuthToken'] = $this->config['MWSAuthToken'];
-        }
 
         if (isset($query['MarketplaceId'])) {
             unset($query['MarketplaceId.Id.1']);
         }
 
-        if (isset($query['MarketplaceIdList.Id.1'])) {
-            unset($query['MarketplaceId.Id.1']);
-        }
-
         try {
-
             $headers = [
                 'Accept' => 'application/xml',
                 'x-amazon-user-agent' => $this->config['Application_Name'] . '/' . $this->config['Application_Version']
@@ -1391,10 +984,7 @@ class MWSClient {
                 $headers['Content-MD5'] = base64_encode(md5($body, true));
                 $headers['Content-Type'] = 'text/xml; charset=iso-8859-1';
                 $headers['Host'] = $this->config['Region_Host'];
-
-                unset(
-                        $query['MarketplaceId.Id.1'], $query['SellerId']
-                );
+                unset($query['MarketplaceId.Id.1'], $query['SellerId']);
             }
 
             $requestOptions = [
@@ -1404,17 +994,14 @@ class MWSClient {
 
             ksort($query);
 
-            $query['Signature'] = base64_encode(
-                    hash_hmac(
-                            'sha256', $endPoint['method']
-                            . "\n"
-                            . $this->config['Region_Host']
-                            . "\n"
-                            . $endPoint['path']
-                            . "\n"
-                            . http_build_query($query, null, '&', PHP_QUERY_RFC3986), $this->config['Secret_Access_Key'], true
-                    )
-            );
+            $hmacParamString = $endPoint['method']
+                    . "\n"
+                    . $this->config['Region_Host']
+                    . "\n"
+                    . $endPoint['path']
+                    . "\n"
+                    . http_build_query($query, null, '&', PHP_QUERY_RFC3986);
+            $query['Signature'] = base64_encode(hash_hmac('sha256', $hmacParamString, $this->config['Secret_Access_Key'], true));
 
             $requestOptions['query'] = $query;
 
@@ -1422,14 +1009,9 @@ class MWSClient {
                 $this->client = new Client();
             }
 
-            $response = $this->client->request(
-                    $endPoint['method'], $this->config['Region_Url'] . $endPoint['path'], $requestOptions
-            );
-
-
+            $response = $this->client->request($endPoint['method'], $this->config['Region_Url'] . $endPoint['path'], $requestOptions);
 
             $body = (string) $response->getBody();
-
 
             if ($raw) {
                 return $body;
