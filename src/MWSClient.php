@@ -1092,7 +1092,7 @@ class MWSClient {
         ];
 
         $appendHeader && $header = array_merge($header, $appendHeader);
-        
+
         $csv->insertOne($header);
 
         foreach ($OrderItems as $item) {
